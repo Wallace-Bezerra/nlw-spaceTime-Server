@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
+  relationMode = "prisma"
 }
 
 model User {
@@ -26,4 +27,6 @@ model Memory {
   date      DateTime
 
   user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
 }

@@ -12,7 +12,7 @@ export async function memoriesRoutes(app: FastifyInstance) {
       where: {
         userId: request.user.sub,
       },
-      orderBy: { createdAt: "asc" },
+      orderBy: { date: "desc" },
     });
     return memories.map((memory) => {
       return {

@@ -23,9 +23,9 @@ app.register(auth);
 app.register(memoriesRoutes);
 app.register(publicRouter);
 app.register(uploadRoutes);
-// app.listen({ port: 3333 }).then(() => {
-//   console.log("Rodando ...");
-// });
-app.listen({ port: 3333, host: "192.168.100.103" }).then(() => {
+app.listen({ port: 3333 }).then(() => {
   console.log("Rodando ...");
 });
+// app.listen({ port: 3333, host: "192.168.100.103" }).then(() => {
+//   console.log("Rodando ...");
+// });

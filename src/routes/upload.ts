@@ -11,7 +11,7 @@ export async function uploadRoutes(app: FastifyInstance) {
   app.post("/upload", async (request, reply) => {
     const upload = await request.file({
       limits: {
-        fileSize: 5242_880, // 5mb
+        fileSize: 52_428_800, // 5mb
       },
     });
     if (!upload) {
@@ -20,9 +20,8 @@ export async function uploadRoutes(app: FastifyInstance) {
     const mimeTypeRegex = /^(image|video)\/[a-zA-Z]+/;
     const isValidFileFormat = mimeTypeRegex.test(upload.mimetype);
     if (!isValidFileFormat) {
-      return reply.status(400).send();
+      return reply.status(400).send("Formato de mídia invalido");
     }
-    console.log(upload.filename);
     const fileId = randomUUID();
     const extension = extname(upload.filename);
     const filename = fileId.concat(extension);
@@ -41,12 +40,10 @@ export async function uploadRoutes(app: FastifyInstance) {
       id: z.string(),
     });
     const { id } = paramsSchema.parse(request.params);
-    console.log(id);
     unlink(`./uploads/${id}`, (err) => {
       if (err) {
         return reply.status(400);
       }
-      console.log("Delete File successfully.");
     });
     return reply.status(200).send("Arquivo Deletado");
   });
