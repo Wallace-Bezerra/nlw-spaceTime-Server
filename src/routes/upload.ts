@@ -1,17 +1,14 @@
 import { randomUUID } from "node:crypto";
-import { extname, resolve } from "node:path";
+import { extname } from "node:path";
 import { FastifyInstance } from "fastify";
-import { createWriteStream, unlink } from "node:fs";
-import { pipeline } from "node:stream";
-import { promisify } from "node:util";
 import { z } from "zod";
+import { s3 } from "../config/aws";
 
-const pump = promisify(pipeline);
 export async function uploadRoutes(app: FastifyInstance) {
   app.post("/upload", async (request, reply) => {
     const upload = await request.file({
       limits: {
-        fileSize: 52_428_800, // 5mb
+        fileSize: 52_428_800, // 50mb
       },
     });
     if (!upload) {
@@ -25,26 +22,34 @@ export async function uploadRoutes(app: FastifyInstance) {
     const fileId = randomUUID();
     const extension = extname(upload.filename);
     const filename = fileId.concat(extension);
-
-    const writeStream = createWriteStream(
-      resolve(__dirname, "../../uploads/", filename)
-    );
-    await pump(upload.file, writeStream);
-    const fullUrl = request.protocol.concat("://").concat(request.hostname);
-    const fileUrl = new URL(`/uploads/${filename}`, fullUrl).toString();
+    const uploadS3 = await s3.upload({
+      Bucket: "nlwspacetimewallace",
+      Key: filename,
+      ACL: "public-read",
+      Body: upload.file,
+    });
+    const fileUrl = (await uploadS3.promise()).Location;
     return { fileUrl };
   });
   app.delete("/upload/:id", async (request, reply) => {
-    // const upload = await request.file();
     const paramsSchema = z.object({
       id: z.string(),
     });
     const { id } = paramsSchema.parse(request.params);
-    unlink(`./uploads/${id}`, (err) => {
-      if (err) {
-        return reply.status(400);
+    console.log(id);
+    s3.deleteObject(
+      {
+        Bucket: "nlwspacetimewallace",
+        Key: id,
+      },
+      (err, data) => {
+        if (err) {
+          console.error("Erro ao excluir a imagem:", err);
+        } else {
+          console.log("Imagem excluída com sucesso.");
+        }
       }
-    });
+    );
     return reply.status(200).send("Arquivo Deletado");
   });
 }
