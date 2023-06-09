@@ -2,7 +2,14 @@ import { randomUUID } from "node:crypto";
 import { extname } from "node:path";
 import { FastifyInstance } from "fastify";
 import { z } from "zod";
-import { s3 } from "../config/aws";
+
+import {
+  ref,
+  uploadBytesResumable,
+  getDownloadURL,
+  deleteObject,
+} from "firebase/storage";
+import { storage } from "../config/firebase";
 
 export async function uploadRoutes(app: FastifyInstance) {
   app.post("/upload", async (request, reply) => {
@@ -22,34 +29,21 @@ export async function uploadRoutes(app: FastifyInstance) {
     const fileId = randomUUID();
     const extension = extname(upload.filename);
     const filename = fileId.concat(extension);
-    const uploadS3 = await s3.upload({
-      Bucket: "nlwspacetimewallace",
-      Key: filename,
-      ACL: "public-read",
-      Body: upload.file,
-    });
-    const fileUrl = (await uploadS3.promise()).Location;
+
+    const storageRef = ref(storage, `uploads/${filename}`);
+    await uploadBytesResumable(storageRef, await upload.toBuffer());
+    const fileUrl = await getDownloadURL(storageRef);
     return { fileUrl };
   });
+
   app.delete("/upload/:id", async (request, reply) => {
     const paramsSchema = z.object({
       id: z.string(),
     });
     const { id } = paramsSchema.parse(request.params);
     console.log(id);
-    s3.deleteObject(
-      {
-        Bucket: "nlwspacetimewallace",
-        Key: id,
-      },
-      (err, data) => {
-        if (err) {
-          console.error("Erro ao excluir a imagem:", err);
-        } else {
-          console.log("Imagem excluída com sucesso.");
-        }
-      }
-    );
+    const deleteRef = ref(storage, `uploads/${id}`);
+    await deleteObject(deleteRef);
     return reply.status(200).send("Arquivo Deletado");
   });
 }
